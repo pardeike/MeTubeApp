@@ -53,7 +53,10 @@ public struct VideoListView: View {
                     Task {
                         switch status {
                         case .watched:
+                            // TODO - this is now a toggle
+                            await viewModel.markAsUnwatched(video)
                             await viewModel.markAsWatched(video)
+                            // end todo
                         case .skipped:
                             await viewModel.markAsSkipped(video)
                         case .unwatched:

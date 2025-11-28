@@ -55,12 +55,14 @@ public struct VideoRowView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            let watchedLabel = video.watchStatus != .watched ? "Watched" : "Unwatch"
+            let watchTint: Color = video.watchStatus != .watched ? .green : .gray
             Button {
                 onWatched()
             } label: {
-                Label("Watched", systemImage: "checkmark.circle.fill")
+                Label(watchedLabel, systemImage: "checkmark.circle.fill")
             }
-            .tint(.green)
+            .tint(watchTint)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
