@@ -56,13 +56,17 @@ MeTube/
 
 ## Requirements
 
-- iOS 17.0+
+- iOS 16.0+
 - Xcode 15.0+
 - Swift 5.9+
 
 ## Building
 
-Open the project in Xcode or build from command line on macOS:
+### Xcode (iOS app)
+
+- Open `MeTubeApp.xcodeproj`, select the `MeTubeApp` scheme, set your signing team, and run on an iOS 16+ simulator or device.
+
+### Swift Package (library)
 
 ```bash
 cd MeTube
@@ -106,4 +110,3 @@ To integrate with the real YouTube API:
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
-

@@ -7,7 +7,7 @@ public struct VideoListView: View {
     @State private var showingFilter = false
     @State private var selectedVideo: Video?
     
-    public init(viewModel: VideoListViewModel = VideoListViewModel()) {
+    public init(viewModel: VideoListViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
@@ -96,21 +96,48 @@ public struct VideoListView: View {
     }
     
     private var emptyStateView: some View {
-        ContentUnavailableView {
-            Label("No Videos", systemImage: "play.rectangle.on.rectangle")
-        } description: {
-            if viewModel.videos.isEmpty {
-                Text("Pull to refresh to load videos from your subscriptions.")
-            } else {
-                Text("No videos match your current filters.")
-            }
-        } actions: {
-            if !viewModel.videos.isEmpty {
-                Button("Reset Filters") {
-                    viewModel.resetFilters()
+        Group {
+            if #available(iOS 17.0, *) {
+                ContentUnavailableView {
+                    Label("No Videos", systemImage: "play.rectangle.on.rectangle")
+                } description: {
+                    emptyStateDescription
+                } actions: {
+                    emptyStateActions
                 }
-                .buttonStyle(.bordered)
+            } else {
+                VStack(spacing: 12) {
+                    Label("No Videos", systemImage: "play.rectangle.on.rectangle")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    emptyStateDescription
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                    emptyStateActions
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
             }
+        }
+    }
+    
+    @ViewBuilder
+    private var emptyStateDescription: some View {
+        if viewModel.videos.isEmpty {
+            Text("Pull to refresh to load videos from your subscriptions.")
+        } else {
+            Text("No videos match your current filters.")
+        }
+    }
+    
+    @ViewBuilder
+    private var emptyStateActions: some View {
+        if !viewModel.videos.isEmpty {
+            Button("Reset Filters") {
+                viewModel.resetFilters()
+            }
+            .buttonStyle(.bordered)
         }
     }
     
