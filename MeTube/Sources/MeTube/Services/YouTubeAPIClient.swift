@@ -4,7 +4,7 @@ import FoundationNetworking
 #endif
 
 /// Protocol for YouTube API operations
-public protocol YouTubeAPIProtocol {
+public protocol YouTubeAPIProtocol: Sendable {
     /// Whether the API client is configured with valid credentials (API key or user login)
     var isConfigured: Bool { get }
     
@@ -40,7 +40,7 @@ public enum YouTubeAPIError: Error, LocalizedError {
 #if canImport(Darwin)
 /// YouTube API client implementation
 /// Note: This is a stub implementation. Actual implementation requires YouTube Data API v3 credentials.
-public final class YouTubeAPIClient: YouTubeAPIProtocol {
+public final class YouTubeAPIClient: YouTubeAPIProtocol, @unchecked Sendable {
     private let apiKey: String?
     private let session: URLSession
     
@@ -82,7 +82,7 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
 #endif
 
 /// Mock YouTube API client for testing and preview
-public final class MockYouTubeAPIClient: YouTubeAPIProtocol {
+public final class MockYouTubeAPIClient: YouTubeAPIProtocol, @unchecked Sendable {
     private let _isConfigured: Bool
     
     /// Creates a mock API client
