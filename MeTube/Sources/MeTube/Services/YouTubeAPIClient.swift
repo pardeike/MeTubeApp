@@ -85,11 +85,15 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
 public final class MockYouTubeAPIClient: YouTubeAPIProtocol {
     private let _isConfigured: Bool
     
-    public init(isConfigured: Bool = true) {
+    /// Creates a mock API client
+    /// - Parameter isConfigured: Whether the client should report as configured.
+    ///   Defaults to `false` so the app shows login button in production.
+    ///   Set to `true` in tests/previews to simulate a configured state.
+    public init(isConfigured: Bool = false) {
         self._isConfigured = isConfigured
     }
     
-    /// Mock client is always considered configured by default for testing/preview
+    /// Mock client reports as unconfigured by default (shows login button)
     public var isConfigured: Bool {
         _isConfigured
     }

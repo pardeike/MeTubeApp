@@ -85,10 +85,6 @@ public struct VideoListView: View {
             }
             .task {
                 await viewModel.loadFromStorage()
-                // Load mock data if empty (for development/preview)
-                if viewModel.videos.isEmpty {
-                    viewModel.loadMockData()
-                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
@@ -338,7 +334,7 @@ public struct LoginPromptView: View {
 }
 
 #Preview {
-    let viewModel = VideoListViewModel()
+    let viewModel = VideoListViewModel(apiClient: MockYouTubeAPIClient(isConfigured: true))
     viewModel.loadMockData()
     return VideoListView(viewModel: viewModel)
 }
