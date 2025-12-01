@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents a YouTube video from a subscribed channel
-public struct Video: Identifiable, Codable, Equatable {
+public struct Video: Sendable, Identifiable, Codable, Equatable {
     public let id: String
     public let channelId: String
     public let channelTitle: String

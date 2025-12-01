@@ -1,7 +1,7 @@
 import Foundation
 
 /// Sort order for videos
-public enum SortOrder: String, CaseIterable, Identifiable {
+public enum SortOrder: String, Sendable, CaseIterable, Identifiable {
     case newestFirst = "newest"
     case oldestFirst = "oldest"
     
@@ -23,7 +23,7 @@ public enum SortOrder: String, CaseIterable, Identifiable {
 }
 
 /// Filter options for the video list
-public struct VideoFilter: Equatable {
+public struct VideoFilter: Sendable, Equatable {
     public var showWatched: Bool
     public var showSkipped: Bool
     public var showUnwatched: Bool

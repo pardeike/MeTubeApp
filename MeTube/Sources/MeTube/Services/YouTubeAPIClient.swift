@@ -4,7 +4,10 @@ import FoundationNetworking
 #endif
 
 /// Protocol for YouTube API operations
-public protocol YouTubeAPIProtocol {
+public protocol YouTubeAPIProtocol: Sendable {
+    /// Whether the API client is configured with valid credentials (API key or user login)
+    var isConfigured: Bool { get }
+    
     func fetchSubscriptions() async throws -> [Channel]
     func fetchVideos(forChannel channelId: String, since date: Date?) async throws -> [Video]
     func fetchAllSubscriptionVideos(since date: Date?) async throws -> [Video]
@@ -37,13 +40,19 @@ public enum YouTubeAPIError: Error, LocalizedError {
 #if canImport(Darwin)
 /// YouTube API client implementation
 /// Note: This is a stub implementation. Actual implementation requires YouTube Data API v3 credentials.
-public final class YouTubeAPIClient: YouTubeAPIProtocol {
+public final class YouTubeAPIClient: YouTubeAPIProtocol, @unchecked Sendable {
     private let apiKey: String?
     private let session: URLSession
     
     public init(apiKey: String? = nil, session: URLSession = .shared) {
         self.apiKey = apiKey
         self.session = session
+    }
+    
+    /// Returns true if an API key is configured
+    public var isConfigured: Bool {
+        guard let key = apiKey else { return false }
+        return !key.isEmpty
     }
     
     public func fetchSubscriptions() async throws -> [Channel] {
@@ -73,8 +82,21 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
 #endif
 
 /// Mock YouTube API client for testing and preview
-public final class MockYouTubeAPIClient: YouTubeAPIProtocol {
-    public init() {}
+public final class MockYouTubeAPIClient: YouTubeAPIProtocol, @unchecked Sendable {
+    private let _isConfigured: Bool
+    
+    /// Creates a mock API client
+    /// - Parameter isConfigured: Whether the client should report as configured.
+    ///   Defaults to `false` so the app shows login button in production.
+    ///   Set to `true` in tests/previews to simulate a configured state.
+    public init(isConfigured: Bool = false) {
+        self._isConfigured = isConfigured
+    }
+    
+    /// Mock client reports as unconfigured by default (shows login button)
+    public var isConfigured: Bool {
+        _isConfigured
+    }
     
     public func fetchSubscriptions() async throws -> [Channel] {
         return Channel.mockChannels

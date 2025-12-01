@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol for persisting video and channel data
-public protocol VideoStoreProtocol {
+public protocol VideoStoreProtocol: Sendable {
     func loadVideos() async throws -> [Video]
     func saveVideos(_ videos: [Video]) async throws
     func loadChannels() async throws -> [Channel]
@@ -9,7 +9,7 @@ public protocol VideoStoreProtocol {
 }
 
 /// Local storage implementation using UserDefaults and JSON encoding
-public final class LocalVideoStore: VideoStoreProtocol {
+public final class LocalVideoStore: VideoStoreProtocol, @unchecked Sendable {
     private let videosKey = "com.metube.videos"
     private let channelsKey = "com.metube.channels"
     private let defaults: UserDefaults

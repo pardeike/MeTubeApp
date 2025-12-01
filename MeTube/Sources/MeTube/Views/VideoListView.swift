@@ -6,6 +6,8 @@ public struct VideoListView: View {
     @StateObject private var viewModel: VideoListViewModel
     @State private var showingFilter = false
     @State private var selectedVideo: Video?
+    @State private var showingLoginSheet = false
+    @Environment(\.scenePhase) private var scenePhase
     
     public init(viewModel: VideoListViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -25,15 +27,15 @@ public struct VideoListView: View {
             .navigationTitle("MeTube")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    leadingToolbarItem
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     sortButton
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     filterButton
-                }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    refreshButton
                 }
             }
             .searchable(text: $viewModel.searchText, prompt: "Search videos")
@@ -48,19 +50,23 @@ public struct VideoListView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $showingLoginSheet) {
+                LoginPromptView()
+                    .presentationDetents([.medium])
+            }
             .sheet(item: $selectedVideo) { video in
                 VideoPlayerView(video: video, onStatusChange: { status in
                     Task {
                         switch status {
-                        case .watched:
-                            // TODO - this is now a toggle
-                            await viewModel.markAsUnwatched(video)
-                            await viewModel.markAsWatched(video)
-                            // end todo
-                        case .skipped:
-                            await viewModel.markAsSkipped(video)
-                        case .unwatched:
-                            await viewModel.markAsUnwatched(video)
+                            case .watched:
+                                // TODO - this is now a toggle
+                                await viewModel.markAsUnwatched(video)
+                                await viewModel.markAsWatched(video)
+                                // end todo
+                            case .skipped:
+                                await viewModel.markAsSkipped(video)
+                            case .unwatched:
+                                await viewModel.markAsUnwatched(video)
                         }
                     }
                 })
@@ -82,6 +88,29 @@ public struct VideoListView: View {
                 // Load mock data if empty (for development/preview)
                 if viewModel.videos.isEmpty {
                     viewModel.loadMockData()
+                }
+            }
+        }
+        .alert("Error", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
+            }
+        }
+        .task {
+            await viewModel.loadFromStorage()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Sync when app comes to foreground
+                Task {
+                    await viewModel.syncSubscriptions()
                 }
             }
         }
@@ -187,6 +216,68 @@ public struct VideoListView: View {
         .background(Color(.systemGroupedBackground))
     }
     
+    /// Leading toolbar item: shows sync indicator when configured, login button otherwise
+    @ViewBuilder
+    private var leadingToolbarItem: some View {
+        if viewModel.isConfigured {
+            syncIndicatorButton
+        } else {
+            loginButton
+        }
+    }
+    
+    /// Sync indicator button - shows sync status and allows manual sync
+    private var syncIndicatorButton: some View {
+        Button {
+            Task { await viewModel.syncSubscriptions() }
+        } label: {
+            if viewModel.isSyncing {
+                ProgressView()
+                    .progressViewStyle(.circular)
+            } else {
+                Image(systemName: syncStatusIcon)
+            }
+        }
+        .disabled(viewModel.isSyncing)
+        .accessibilityLabel(syncAccessibilityLabel)
+    }
+    
+    private var syncStatusIcon: String {
+        switch viewModel.syncState {
+        case .idle:
+            return "arrow.triangle.2.circlepath"
+        case .syncing:
+            return "arrow.triangle.2.circlepath"
+        case .completed:
+            return "checkmark.arrow.trianglehead.counterclockwise"
+        case .failed:
+            return "exclamationmark.arrow.trianglehead.2.clockwise.rotate.90"
+        }
+    }
+    
+    private var syncAccessibilityLabel: String {
+        switch viewModel.syncState {
+        case .idle:
+            return "Sync subscriptions"
+        case .syncing:
+            return "Syncing..."
+        case .completed:
+            return "Sync complete. Tap to sync again."
+        case .failed(let error):
+            return "Sync failed: \(error). Tap to retry."
+        }
+    }
+    
+    /// Login button shown when not configured
+    private var loginButton: some View {
+        Button {
+            showingLoginSheet = true
+        } label: {
+            Image(systemName: "person.crop.circle")
+        }
+        .accessibilityLabel("Sign in to sync subscriptions")
+    }
+    
     private var sortButton: some View {
         Button {
             viewModel.toggleSortOrder()
@@ -206,26 +297,63 @@ public struct VideoListView: View {
         }
     }
     
-    private var refreshButton: some View {
-        Button {
-            Task { await viewModel.refreshFromAPI() }
-        } label: {
-            if viewModel.isLoading {
-                ProgressView()
-            } else {
-                Image(systemName: "arrow.clockwise")
-            }
-        }
-        .disabled(viewModel.isLoading)
-    }
-    
     private var hasActiveFilters: Bool {
         viewModel.filter != .defaultFilter || !viewModel.searchText.isEmpty
     }
 }
 
+/// Simple login prompt view explaining how to configure the app
+public struct LoginPromptView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    public init() {}
+    
+    public var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Image(systemName: "key.fill")
+                    .font(.system(size: 60))
+                    .foregroundStyle(.secondary)
+                
+                Text("Sign In Required")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Text("To sync your YouTube subscriptions, you need to configure the app with either:")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("YouTube API Key", systemImage: "key")
+                    Label("Google Account Login", systemImage: "person.crop.circle")
+                }
+                .font(.body)
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                Text("This feature is currently under development.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Setup Required")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
 #Preview {
-    let viewModel = VideoListViewModel()
+    let viewModel = VideoListViewModel(apiClient: MockYouTubeAPIClient(isConfigured: true))
     viewModel.loadMockData()
     return VideoListView(viewModel: viewModel)
 }

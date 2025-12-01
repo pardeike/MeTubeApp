@@ -3,6 +3,14 @@ import Foundation
 #if canImport(Combine)
 import Combine
 
+/// Sync state for subscription video synchronization
+public enum SyncState: Equatable {
+    case idle
+    case syncing
+    case completed
+    case failed(String)
+}
+
 /// Main view model for managing video list and filtering
 @MainActor
 public final class VideoListViewModel: ObservableObject {
@@ -12,9 +20,20 @@ public final class VideoListViewModel: ObservableObject {
     @Published public var isLoading: Bool = false
     @Published public var errorMessage: String?
     @Published public var searchText: String = ""
+    @Published public var syncState: SyncState = .idle
     
     private let store: VideoStoreProtocol
     private let apiClient: YouTubeAPIProtocol
+    
+    /// Whether the API client is configured with credentials (API key or user login)
+    public var isConfigured: Bool {
+        apiClient.isConfigured
+    }
+    
+    /// Whether sync is currently in progress
+    public var isSyncing: Bool {
+        syncState == .syncing
+    }
     
     public init(store: VideoStoreProtocol = LocalVideoStore(), apiClient: YouTubeAPIProtocol = MockYouTubeAPIClient()) {
         self.store = store
@@ -75,9 +94,17 @@ public final class VideoListViewModel: ObservableObject {
         }
     }
     
-    /// Refresh videos from YouTube API
-    public func refreshFromAPI() async {
-        isLoading = true
+    /// Sync subscription videos from YouTube API
+    /// This is the primary method for syncing content, used for foreground sync and manual sync
+    public func syncSubscriptions() async {
+        guard isConfigured else {
+            syncState = .failed("Not configured. Please set up API key or log in.")
+            return
+        }
+        
+        guard syncState != .syncing else { return } // Prevent multiple concurrent syncs
+        
+        syncState = .syncing
         errorMessage = nil
         
         do {
@@ -100,11 +127,18 @@ public final class VideoListViewModel: ObservableObject {
             
             videos = newVideos
             try await store.saveVideos(videos)
+            syncState = .completed
         } catch {
             errorMessage = error.localizedDescription
+            syncState = .failed(error.localizedDescription)
         }
-        
-        isLoading = false
+    }
+    
+    /// Refresh videos from YouTube API
+    public func refreshFromAPI() async {
+        isLoading = true
+        defer { isLoading = false }
+        await syncSubscriptions()
     }
     
     /// Mark a video as watched
