@@ -51,7 +51,8 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
     
     /// Returns true if an API key is configured
     public var isConfigured: Bool {
-        apiKey != nil && !apiKey!.isEmpty
+        guard let key = apiKey else { return false }
+        return !key.isEmpty
     }
     
     public func fetchSubscriptions() async throws -> [Channel] {

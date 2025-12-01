@@ -137,8 +137,8 @@ public final class VideoListViewModel: ObservableObject {
     /// Refresh videos from YouTube API
     public func refreshFromAPI() async {
         isLoading = true
+        defer { isLoading = false }
         await syncSubscriptions()
-        isLoading = false
     }
     
     /// Mark a video as watched
