@@ -29,11 +29,11 @@ public struct VideoListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingToolbarItem
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     sortButton
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     filterButton
                 }
@@ -58,15 +58,15 @@ public struct VideoListView: View {
                 VideoPlayerView(video: video, onStatusChange: { status in
                     Task {
                         switch status {
-                        case .watched:
-                            // TODO - this is now a toggle
-                            await viewModel.markAsUnwatched(video)
-                            await viewModel.markAsWatched(video)
-                            // end todo
-                        case .skipped:
-                            await viewModel.markAsSkipped(video)
-                        case .unwatched:
-                            await viewModel.markAsUnwatched(video)
+                            case .watched:
+                                // TODO - this is now a toggle
+                                await viewModel.markAsUnwatched(video)
+                                await viewModel.markAsWatched(video)
+                                // end todo
+                            case .skipped:
+                                await viewModel.markAsSkipped(video)
+                            case .unwatched:
+                                await viewModel.markAsUnwatched(video)
                         }
                     }
                 })
@@ -85,13 +85,32 @@ public struct VideoListView: View {
             }
             .task {
                 await viewModel.loadFromStorage()
+                // Load mock data if empty (for development/preview)
+                if viewModel.videos.isEmpty {
+                    viewModel.loadMockData()
+                }
             }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    // Sync when app comes to foreground
-                    Task {
-                        await viewModel.syncSubscriptions()
-                    }
+        }
+        .alert("Error", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
+            }
+        }
+        .task {
+            await viewModel.loadFromStorage()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                // Sync when app comes to foreground
+                Task {
+                    await viewModel.syncSubscriptions()
                 }
             }
         }

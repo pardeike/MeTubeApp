@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents the watch status of a video
-public enum WatchStatus: String, Codable, Equatable, CaseIterable {
+public enum WatchStatus: String, Sendable, Codable, Equatable, CaseIterable {
     case unwatched
     case watched
     case skipped
