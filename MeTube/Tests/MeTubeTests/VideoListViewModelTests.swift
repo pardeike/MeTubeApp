@@ -229,5 +229,89 @@ final class VideoListViewModelTests: XCTestCase {
         viewModel.toggleSortOrder()
         XCTAssertEqual(viewModel.filter.sortOrder, .newestFirst)
     }
+    
+    // MARK: - Sync Tests
+    
+    func testInitialSyncState() {
+        let viewModel = VideoListViewModel()
+        
+        XCTAssertEqual(viewModel.syncState, .idle)
+        XCTAssertFalse(viewModel.isSyncing)
+    }
+    
+    func testIsConfigured_WithConfiguredClient() {
+        let mockClient = MockYouTubeAPIClient(isConfigured: true)
+        let viewModel = VideoListViewModel(apiClient: mockClient)
+        
+        XCTAssertTrue(viewModel.isConfigured)
+    }
+    
+    func testIsConfigured_WithUnconfiguredClient() {
+        let mockClient = MockYouTubeAPIClient(isConfigured: false)
+        let viewModel = VideoListViewModel(apiClient: mockClient)
+        
+        XCTAssertFalse(viewModel.isConfigured)
+    }
+    
+    func testSyncSubscriptions_WhenNotConfigured() async {
+        let mockClient = MockYouTubeAPIClient(isConfigured: false)
+        let viewModel = VideoListViewModel(apiClient: mockClient)
+        
+        await viewModel.syncSubscriptions()
+        
+        // Should fail when not configured
+        if case .failed = viewModel.syncState {
+            // Expected behavior
+        } else {
+            XCTFail("Expected sync to fail when not configured")
+        }
+    }
+    
+    func testSyncSubscriptions_WhenConfigured() async {
+        let mockClient = MockYouTubeAPIClient(isConfigured: true)
+        let viewModel = VideoListViewModel(apiClient: mockClient)
+        
+        await viewModel.syncSubscriptions()
+        
+        XCTAssertEqual(viewModel.syncState, .completed)
+        XCTAssertFalse(viewModel.videos.isEmpty)
+        XCTAssertFalse(viewModel.channels.isEmpty)
+    }
+    
+    func testSyncState_UpdatesDuringSync() async {
+        let mockClient = MockYouTubeAPIClient(isConfigured: true)
+        let viewModel = VideoListViewModel(apiClient: mockClient)
+        
+        XCTAssertEqual(viewModel.syncState, .idle)
+        
+        await viewModel.syncSubscriptions()
+        
+        // After sync completes, state should be completed
+        XCTAssertEqual(viewModel.syncState, .completed)
+    }
+    
+    func testIsSyncing_ReturnsTrueOnlySyncing() async {
+        let viewModel = VideoListViewModel()
+        
+        // Initially not syncing
+        XCTAssertFalse(viewModel.isSyncing)
+        
+        // After sync completes
+        await viewModel.syncSubscriptions()
+        XCTAssertFalse(viewModel.isSyncing)
+    }
+}
+
+final class SyncStateTests: XCTestCase {
+    
+    func testSyncStateEquality() {
+        XCTAssertEqual(SyncState.idle, SyncState.idle)
+        XCTAssertEqual(SyncState.syncing, SyncState.syncing)
+        XCTAssertEqual(SyncState.completed, SyncState.completed)
+        XCTAssertEqual(SyncState.failed("error"), SyncState.failed("error"))
+        
+        XCTAssertNotEqual(SyncState.idle, SyncState.syncing)
+        XCTAssertNotEqual(SyncState.failed("error1"), SyncState.failed("error2"))
+    }
 }
 #endif

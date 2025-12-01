@@ -5,6 +5,9 @@ import FoundationNetworking
 
 /// Protocol for YouTube API operations
 public protocol YouTubeAPIProtocol {
+    /// Whether the API client is configured with valid credentials (API key or user login)
+    var isConfigured: Bool { get }
+    
     func fetchSubscriptions() async throws -> [Channel]
     func fetchVideos(forChannel channelId: String, since date: Date?) async throws -> [Video]
     func fetchAllSubscriptionVideos(since date: Date?) async throws -> [Video]
@@ -46,6 +49,11 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
         self.session = session
     }
     
+    /// Returns true if an API key is configured
+    public var isConfigured: Bool {
+        apiKey != nil && !apiKey!.isEmpty
+    }
+    
     public func fetchSubscriptions() async throws -> [Channel] {
         // Stub implementation - returns mock data for development
         // Real implementation would use YouTube Data API v3
@@ -74,7 +82,16 @@ public final class YouTubeAPIClient: YouTubeAPIProtocol {
 
 /// Mock YouTube API client for testing and preview
 public final class MockYouTubeAPIClient: YouTubeAPIProtocol {
-    public init() {}
+    private let _isConfigured: Bool
+    
+    public init(isConfigured: Bool = true) {
+        self._isConfigured = isConfigured
+    }
+    
+    /// Mock client is always considered configured by default for testing/preview
+    public var isConfigured: Bool {
+        _isConfigured
+    }
     
     public func fetchSubscriptions() async throws -> [Channel] {
         return Channel.mockChannels
